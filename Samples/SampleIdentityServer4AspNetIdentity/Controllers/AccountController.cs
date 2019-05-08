@@ -17,6 +17,7 @@ using IdentityServer4.Quickstart.UI;
 using IdentityServer4.Services;
 using IdentityServer4.Stores;
 using Microsoft.AspNetCore.Http;
+using IdentityServer4;
 
 namespace SampleIdentityServer4AspNetIdentity.Controllers
 {
@@ -317,6 +318,28 @@ namespace SampleIdentityServer4AspNetIdentity.Controllers
 
         [HttpGet]
         [AllowAnonymous]
+        public async Task<IActionResult> SamlLoginCallback(string returnUrl = null, string remoteError = null)
+        {
+            var info = await _signInManager.GetExternalLoginInfoAsync();
+            var authenticateResult = await HttpContext.AuthenticateAsync(IdentityServerConstants.DefaultCookieAuthenticationScheme);
+            if(authenticateResult?.Principal != null)
+            {
+                var claimsPricipal = authenticateResult.Principal;
+                var email = claimsPricipal.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                var user = await _userManager.FindByEmailAsync("nlqthien@gmail.com");
+                await _signInManager.SignInAsync(user, isPersistent: false);
+
+                return RedirectToLocal(returnUrl);
+            }
+            else
+            {
+                return RedirectToAction(nameof(Login));
+            }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
         public async Task<IActionResult> ExternalLoginCallback(string returnUrl = null, string remoteError = null)
         {
             if (remoteError != null)
@@ -324,6 +347,7 @@ namespace SampleIdentityServer4AspNetIdentity.Controllers
                 ErrorMessage = $"Error from external provider: {remoteError}";
                 return RedirectToAction(nameof(Login));
             }
+
             var info = await _signInManager.GetExternalLoginInfoAsync();
             if (info == null)
             {

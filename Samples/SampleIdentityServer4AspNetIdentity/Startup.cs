@@ -1,4 +1,5 @@
 ﻿using IdentityServer4;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -51,17 +52,20 @@ namespace SampleIdentityServer4AspNetIdentity
 				.AddAspNetIdentity<ApplicationUser>();
 
 			services.AddAuthentication()
-				.AddSaml2(options =>
+				.AddSaml2("Saml2", options =>
 				{
-					options.SPOptions.EntityId = new EntityId("https://localhost:44342/Saml2");
-					options.IdentityProviders.Add(
-						new IdentityProvider(
-							new EntityId("http://localhost:52071/Metadata"), options.SPOptions)
-						{
-							LoadMetadata = true
-						});
-
-					options.SPOptions.ServiceCertificates.Add(new X509Certificate2("Sustainsys.Saml2.Tests.pfx"));
+					options.SPOptions.EntityId = new EntityId("http://localhost:5000/Saml2");
+                    options.SPOptions.ReturnUrl = new System.Uri("http://localhost:5000/Account/SamlLoginCallback");
+                    var idp = new IdentityProvider(
+                            new EntityId("https://app.onelogin.com/saml/metadata/752b381f-bfbb-4d86-be5e-d072190e71da"), options.SPOptions)
+                    {
+                        LoadMetadata = true,
+                        AllowUnsolicitedAuthnResponse = true
+                    };
+                    idp.SigningKeys.AddConfiguredKey(new X509Certificate2("onelogin.pem"));
+                    options.SignInScheme = IdentityServerConstants.DefaultCookieAuthenticationScheme;
+                    options.IdentityProviders.Add(idp);
+					//options.SPOptions.ServiceCertificates.Add(new X509Certificate2("onelogin.pem"));
 					//options.SPOptions.ServiceCertificates.Add(new X509Certificate2(
 					//	HostingEnvironment.ContentRootPath + "\\App_Data\\Sustainsys.Saml2.SampleIdentityServer4AspNetIdentity.pfx"));
 				})
